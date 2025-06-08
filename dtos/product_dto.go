@@ -11,4 +11,5 @@ type ProductDto struct {
 	ImageUrl       string                `json:"image_url"`
 	ImageLocalPath string                `json:"image_local_path"`
 	Image          *multipart.FileHeader `json:"-"`
+	Stock          string                `json:"stock"`
 }

@@ -54,7 +54,7 @@ func CreateProduct(db *gorm.DB) gin.HandlerFunc {
 				path, err := utils.SaveImage(file, filename)
 				if err == nil {
 					dto.ImageLocalPath = path
-					dto.ImageUrl = "/uploads/product_images/" + filename
+					dto.ImageUrl = "/uploads/images/" + filename
 				}
 			}
 		} else {
@@ -69,6 +69,7 @@ func CreateProduct(db *gorm.DB) gin.HandlerFunc {
 			CategoryName:   dto.CategoryName,
 			ImageUrl:       dto.ImageUrl,
 			ImageLocalPath: dto.ImageLocalPath,
+			Stock:          dto.Stock,
 		}
 
 		db.Create(&product)
@@ -115,6 +116,7 @@ func UpdateProduct(db *gorm.DB) gin.HandlerFunc {
 			product.Price, _ = strconv.ParseFloat(c.PostForm("price"), 64)
 			product.Description = c.PostForm("description")
 			product.CategoryName = c.PostForm("category_name")
+			product.Stock = c.PostForm("stock")
 
 			file, _ := c.FormFile("image")
 			if file != nil {

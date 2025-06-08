@@ -8,4 +8,5 @@ type Product struct {
 	CategoryName   string  `json:"category_name"`
 	ImageUrl       string  `json:"image_url"`
 	ImageLocalPath string  `json:"image_local_path"`
+	Stock          string  `json:"stock"`
 }
