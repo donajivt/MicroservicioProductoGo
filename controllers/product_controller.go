@@ -48,6 +48,7 @@ func CreateProduct(db *gorm.DB) gin.HandlerFunc {
 			dto.Price, _ = strconv.ParseFloat(c.PostForm("price"), 64)
 			dto.Description = c.PostForm("description")
 			dto.CategoryName = c.PostForm("category_name")
+			dto.Stock, _ = strconv.Atoi(c.PostForm("stock"))
 			file, _ := c.FormFile("image")
 			if file != nil {
 				filename := dto.Name + "_" + file.Filename
@@ -116,7 +117,7 @@ func UpdateProduct(db *gorm.DB) gin.HandlerFunc {
 			product.Price, _ = strconv.ParseFloat(c.PostForm("price"), 64)
 			product.Description = c.PostForm("description")
 			product.CategoryName = c.PostForm("category_name")
-			product.Stock = c.PostForm("stock")
+			product.Stock, _ = strconv.Atoi(c.PostForm("stock"))
 
 			file, _ := c.FormFile("image")
 			if file != nil {
