@@ -1,38 +1,53 @@
 package utils
 
 import (
-	"io"
+	"fmt"
 	"mime/multipart"
 	"os"
 	"path/filepath"
 )
 
+// Guarda la imagen en ./uploads/images/ y devuelve el path local
 func SaveImage(file *multipart.FileHeader, filename string) (string, error) {
-	path := "uploads/images/"
-	if err := os.MkdirAll(path, os.ModePerm); err != nil {
+	uploadDir := "./uploads/images"
+	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
+			return "", fmt.Errorf("error creando directorio: %v", err)
+		}
+	}
+
+	dst := filepath.Join(uploadDir, filename)
+	if err := saveUploadedFile(file, dst); err != nil {
 		return "", err
 	}
-	fullPath := filepath.Join(path, filename)
-	return fullPath, SaveUploadedFile(file, fullPath)
+
+	return dst, nil
 }
 
-func SaveUploadedFile(file *multipart.FileHeader, dst string) error {
+// Usa Gin para guardar el archivo
+func saveUploadedFile(file *multipart.FileHeader, dst string) error {
 	src, err := file.Open()
 	if err != nil {
 		return err
 	}
 	defer src.Close()
 
-	out, err := os.Create(dst)
+	data := make([]byte, file.Size)
+	_, err = src.Read(data)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
 
-	_, err = io.Copy(out, src)
-	return err
+	return os.WriteFile(dst, data, 0644)
 }
 
+// Elimina imagen del disco si existe
 func DeleteImage(path string) error {
+	if path == "" {
+		return nil
+	}
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil // no hay nada que borrar
+	}
 	return os.Remove(path)
 }

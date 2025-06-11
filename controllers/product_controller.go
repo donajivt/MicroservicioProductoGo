@@ -55,7 +55,7 @@ func CreateProduct(db *gorm.DB) gin.HandlerFunc {
 				path, err := utils.SaveImage(file, filename)
 				if err == nil {
 					dto.ImageLocalPath = path
-					dto.ImageUrl = "/uploads/images/" + filename
+					dto.ImageUrl = "http://localhost:2222/uploads/images/" + filename
 				}
 			}
 		} else {
@@ -112,25 +112,57 @@ func UpdateProduct(db *gorm.DB) gin.HandlerFunc {
 			product.Price = dto.Price
 			product.Description = dto.Description
 			product.CategoryName = dto.CategoryName
+			product.Stock = dto.Stock
 		} else if strings.HasPrefix(contentType, "multipart/form-data") {
+			// Parsear el formulario primero
+			if err := c.Request.ParseMultipartForm(32 << 20); err != nil { // 32 MB
+				c.JSON(http.StatusBadRequest, dtos.ResponseDto{IsSuccess: false, Message: "Error al procesar el formulario"})
+				return
+			}
+
+			// Actualizar campos básicos
 			product.Name = c.PostForm("name")
 			product.Price, _ = strconv.ParseFloat(c.PostForm("price"), 64)
 			product.Description = c.PostForm("description")
 			product.CategoryName = c.PostForm("category_name")
 			product.Stock, _ = strconv.Atoi(c.PostForm("stock"))
 
-			file, _ := c.FormFile("image")
-			if file != nil {
-				// Eliminar imagen antigua
+			// Manejo de imágenes - CORRECCIÓN AQUÍ
+			file, err := c.FormFile("image")
+			if err == nil {
+				// Eliminar imagen antigua solo si existe una local
 				if product.ImageLocalPath != "" {
-					_ = utils.DeleteImage(product.ImageLocalPath)
+					if err := utils.DeleteImage(product.ImageLocalPath); err != nil {
+						c.JSON(http.StatusInternalServerError, dtos.ResponseDto{
+							IsSuccess: false,
+							Message:   "Error al eliminar la imagen anterior",
+						})
+						return
+					}
 				}
 
+				// Guardar nueva imagen
 				filename := product.Name + "_" + file.Filename
 				path, err := utils.SaveImage(file, filename)
-				if err == nil {
-					product.ImageLocalPath = path
-					product.ImageUrl = "/uploads/images/" + filename
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, dtos.ResponseDto{
+						IsSuccess: false,
+						Message:   "Error al guardar la imagen",
+					})
+					return
+				}
+
+				// Actualizar solo los campos de imagen local
+				product.ImageLocalPath = path
+				// Mantener el image_url original si existe
+				if product.ImageUrl == "" {
+					product.ImageUrl = "http://localhost:2222/uploads/images/" + filename
+				}
+			} else {
+				// Si no se subió imagen, mantener las existentes
+				imageUrl := c.PostForm("image_url")
+				if imageUrl != "" {
+					product.ImageUrl = imageUrl
 				}
 			}
 		} else {
@@ -138,7 +170,14 @@ func UpdateProduct(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		db.Save(&product)
+		if err := db.Save(&product).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, dtos.ResponseDto{
+				IsSuccess: false,
+				Message:   "Error al guardar el producto",
+			})
+			return
+		}
+
 		c.JSON(http.StatusOK, dtos.ResponseDto{IsSuccess: true, Result: product})
 	}
 }
